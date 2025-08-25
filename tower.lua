@@ -4,13 +4,24 @@ term.setTextColor(colors.cyan) print(BRAND.logo) print(BRAND.name.." "..BRAND.ve
 local function prompt() io.write("["..BRAND.name.."]> ") end
 if not os.pullEventTimeout then function os.pullEventTimeout(name,timeout) local timer;if timeout then timer=os.startTimer(timeout) end while true do local e={os.pullEvent()}; if e[1]=="timer" and e[2]==timer then return nil end;if not name or e[1]==name then return table.unpack(e) end end end end
 
-local protectedFiles={[shell.getRunningProgram()]=true,["/startup"]=true,["/disk"]=true} local hideSource=true
-local fs_open_orig=fs.open fs.open=function(path,mode,...) if protectedFiles[path] and (mode=="w" or mode=="a") then error("Attempt to modify protected file: "..path) end if hideSource and mode=="r" and protectedFiles[path] then error("Attempt to read protected file: "..path) end return fs_open_orig(path,mode,...) end
-local fs_delete_orig=fs.delete fs.delete=function(path,...) if protectedFiles[path] or path=="/" then error("Attempt to delete protected file or root") end return fs_delete_orig(path,...) end
-local fs_list_orig=fs.list fs.list=function(path,...) local t=fs_list_orig(path,...) if hideSource and (path=="/" or path=="") then local filtered={} for _,v in ipairs(t) do if not protectedFiles["/"..v] then table.insert(filtered,v) end end return filtered end return t end
-local shell_run_orig=shell.run shell.run=function(cmd,...) if cmd:match("install") or cmd:match("os") then error("OS install commands are blocked by OEM lock") end return shell_run_orig(cmd,...) end
+local programName = shell.getRunningProgram()..".lua"
+local protectedFiles = {[programName]=true,["/startup"]=true,["/disk"]=true}
+local hideSource=true
+local fs_open_orig=fs.open
+fs.open=function(path,mode,...)
+  if path==programName and mode=="r" then return fs_open_orig(path,mode,...) end
+  if protectedFiles[path] and (mode=="w" or mode=="a") then error("Attempt to modify protected file: "..path) end
+  if hideSource and mode=="r" and protectedFiles[path] then error("Attempt to read protected file: "..path) end
+  return fs_open_orig(path,mode,...)
+end
+local fs_delete_orig=fs.delete
+fs.delete=function(path,...) if protectedFiles[path] or path=="/" then error("Attempt to delete protected file or root") end return fs_delete_orig(path,...) end
+local shell_run_orig=shell.run
+shell.run=function(cmd,...) if cmd:match("install") or cmd:match("os") then error("OS install commands are blocked by OEM lock") end return shell_run_orig(cmd,...) end
 
-local DATAFILE="/.tower_registry" local registry={} local NAME="Tower1"
+local DATAFILE="/.tower_registry"
+local registry={}
+local NAME="Tower1"
 local function saveRegistry() local f=fs.open(DATAFILE,"w") f.write(textutils.serialize(registry)) f.close() end
 local function loadRegistry() if fs.exists(DATAFILE) then local f=fs.open(DATAFILE,"r") registry=textutils.unserialize(f.readAll()) or {} f.close() else registry={} end end
 loadRegistry()
@@ -20,8 +31,15 @@ for _,side in ipairs(peripheral.getNames()) do if peripheral.getType(side)=="mod
 if not modemSide then print("No modem"); return end
 rednet.open(modemSide)
 
-local PROTO_CTRL="cell.ctrl" local PROTO_DATA="cell.data"
-local function beacon() while true do rednet.broadcast({kind="cell_beacon",tower=NAME,id=os.getComputerID()},65500) sleep(5) end end
+local PROTO_CTRL="cell.ctrl"
+local PROTO_DATA="cell.data"
+
+local function beacon()
+  while true do
+    rednet.broadcast({kind="cell_beacon",tower=NAME,id=os.getComputerID()},65500)
+    sleep(5)
+  end
+end
 
 local function receiver()
   while true do
