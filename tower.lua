@@ -36,7 +36,7 @@ local PROTO_DATA="cell.data"
 
 local function beacon()
   while true do
-    rednet.broadcast({kind="cell_beacon",tower=NAME,id=os.getComputerID()},65500)
+    rednet.broadcast({kind="cell_beacon",tower=NAME,id=os.getComputerID()},tostring(65500))
     sleep(5)
   end
 end
