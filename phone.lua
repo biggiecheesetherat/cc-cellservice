@@ -11,7 +11,7 @@ local DATAFILE="/.phonedata" local myNumber=nil local currentTower={id=nil,name=
 local function saveData() local f=fs.open(DATAFILE,"w") f.write(textutils.serialize({number=myNumber})) f.close() end
 local function loadData() if fs.exists(DATAFILE) then local f=fs.open(DATAFILE,"r") local d=textutils.unserialize(f.readAll()) f.close() if d and d.number then myNumber=d.number end end end
 loadData()
-local BEACON_CH=65500
+local BEACON_CH="65500"
 local modemSide=nil
 for _,side in ipairs(peripheral.getNames()) do if peripheral.getType(side)=="modem" then local m=peripheral.wrap(side) if m.isWireless and m.isWireless() then modemSide=side break end end end
 if not modemSide then print("ERROR: No wireless modem found.") return end
